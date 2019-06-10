@@ -4,6 +4,10 @@ import city_dict
 
 class Config:
     dictum_channel_name = {1: 'ONE●一个', 2: '词霸(每日英语)', 3: '土味情话'}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36",
+    }
+
     def __init__(self):
         '''
         初始化基础数据
@@ -44,3 +48,6 @@ class Config:
         self.alarm_hour = hour
         self.alarm_minute = minute
         self.dictum_channel = dictum_channel
+
+
+config = Config()

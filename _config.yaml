@@ -20,4 +20,4 @@ girlfriend_infos:
     # 从那天开始勾搭的（可空）
     start_date: '2016-01-24'
     # 短句的最后留言（可空）
-    sweet_words: '来自最爱你的我。'
+    sweet_words: ''
