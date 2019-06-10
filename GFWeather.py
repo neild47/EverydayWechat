@@ -4,60 +4,24 @@ from datetime import datetime
 
 import itchat
 import requests
-import yaml
 from apscheduler.schedulers.blocking import BlockingScheduler
 from bs4 import BeautifulSoup
-
-import city_dict
+from Config import Config
+import utils
 
 # fire the job again if it was missed within GRACE_PERIOD
 GRACE_PERIOD = 15 * 60
+
+config = Config()
+
 
 class GFWeather:
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36",
     }
-    dictum_channel_name = {1: 'ONE●一个', 2: '词霸(每日英语)', 3: '土味情话'}
 
     def __init__(self):
-        self.girlfriend_list, self.alarm_hour, self.alarm_minute, self.dictum_channel = self.get_init_data()
-
-    def get_init_data(self):
-        '''
-        初始化基础数据
-        :return: None
-        '''
-        with open('_config.yaml', 'r', encoding='utf-8') as f:
-            config = yaml.load(f, Loader=yaml.Loader)
-
-        alarm_timed = config.get('alarm_timed').strip()
-        init_msg = f"每天定时发送时间：{alarm_timed}\n"
-
-        dictum_channel = config.get('dictum_channel', -1)
-        init_msg += f"格言获取渠道：{self.dictum_channel_name.get(dictum_channel, '无')}\n"
-
-        girlfriend_list = []
-        girlfriend_infos = config.get('girlfriend_infos')
-        for girlfriend in girlfriend_infos:
-            girlfriend.get('wechat_name').strip()
-            # 根据城市名称获取城市编号，用于查询天气。查看支持的城市为：http://cdn.sojson.com/_city.json
-            city_name = girlfriend.get('city_name').strip()
-            city_code = city_dict.city_dict.get(city_name)
-            if not city_code:
-                print('您输入的城市无法收取到天气信息')
-                break
-            girlfriend['city_code'] = city_code
-            girlfriend_list.append(girlfriend)
-
-            print_msg = f"女朋友的微信昵称：{girlfriend.get('wechat_name')}\n\t女友所在城市名称：{girlfriend.get('city_name')}\n\t" \
-                f"在一起的第一天日期：{girlfriend.get('start_date')}\n\t最后一句为：{girlfriend.get('sweet_words')}\n"
-            init_msg += print_msg
-
-        print(u"*" * 50)
-        print(init_msg)
-
-        hour, minute = [int(x) for x in alarm_timed.split(':')]
-        return girlfriend_list, hour, minute, dictum_channel
+        pass
 
     def is_online(self, auto_login=False):
         '''
@@ -107,7 +71,7 @@ class GFWeather:
         # 自动登录
         if not self.is_online(auto_login=True):
             return
-        for girlfriend in self.girlfriend_list:
+        for girlfriend in config.girlfriend_list:
             wechat_name = girlfriend.get('wechat_name')
             friends = itchat.search_friends(name=wechat_name)
             if not friends:
@@ -119,11 +83,11 @@ class GFWeather:
         # 定时任务
         scheduler = BlockingScheduler()
         # 每天9：30左右给女朋友发送每日一句
-        scheduler.add_job(self.start_today_info, 'cron', hour=self.alarm_hour,
-                          minute=self.alarm_minute, misfire_grace_time=GRACE_PERIOD)
+        scheduler.add_job(self.start_today_info, 'cron', hour=config.alarm_hour,
+                          minute=config.alarm_minute, misfire_grace_time=GRACE_PERIOD)
         # 每隔 2 分钟发送一条数据用于测试。
-#         if DEBUG:
-#             scheduler.add_job(self.start_today_info, 'interval', seconds=120)
+        if utils.isDebug():
+            scheduler.add_job(self.start_today_info, 'interval', seconds=30)
         scheduler.start()
 
     def start_today_info(self, is_test=False):
@@ -135,21 +99,21 @@ class GFWeather:
         print("*" * 50)
         print('获取相关信息...')
 
-        if self.dictum_channel == 1:
+        if config.dictum_channel == 1:
             dictum_msg = self.get_dictum_info()
-        elif self.dictum_channel == 2:
+        elif config.dictum_channel == 2:
             dictum_msg = self.get_ciba_info()
-        elif self.dictum_channel == 3:
+        elif config.dictum_channel == 3:
             dictum_msg = self.get_lovelive_info()
         else:
             dictum_msg = ''
 
-        for girlfriend in self.girlfriend_list:
+        for girlfriend in config.girlfriend_list:
             city_code = girlfriend.get('city_code')
             start_date = girlfriend.get('start_date').strip()
             sweet_words = girlfriend.get('sweet_words')
-            today_msg = self.get_weather_info(dictum_msg, city_code=city_code, start_date=start_date,
-                                              sweet_words=sweet_words)
+            today_msg = self.get_message(dictum_msg, city_code=city_code, start_date=start_date,
+                                         sweet_words=sweet_words)
             name_uuid = girlfriend.get('name_uuid')
             wechat_name = girlfriend.get('wechat_name')
             print(f'给『{wechat_name}』发送的内容是:\n{today_msg}')
@@ -219,17 +183,7 @@ class GFWeather:
             print('每日一句获取失败')
             return None
 
-    def get_weather_info(self, dictum_msg='', city_code='101030100', start_date='2018-01-01',
-                         sweet_words='From your Valentine'):
-        '''
-        获取天气信息。网址：https://www.sojson.com/blog/305.html
-        :param dictum_msg: str,发送给朋友的信息
-        :param city_code: str,城市对应编码
-        :param start_date: str,恋爱第一天日期
-        :param sweet_words: str,来自谁的留言
-        :return: str,需要发送的话。
-        '''
-        print('获取天气信息...')
+    def get_weather_msg(self, city_code):
         weather_url = f'http://t.weather.sojson.com/api/weather/city/{city_code}'
         resp = requests.get(url=weather_url)
         if resp.status_code == 200 and self.isJson(resp) and resp.json().get('status') == 200:
@@ -255,20 +209,35 @@ class GFWeather:
             # 空气指数
             aqi = today_weather.get('aqi')
             aqi = f"空气 : {aqi}"
+            return f'{notice}\n{temperature}\n{wind}\n{aqi}\n'
+        return ""
 
-            # 在一起，一共多少天了，如果没有设置初始日期，则不用处理
-            if start_date:
-                try:
-                    start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
-                    day_delta = (datetime.now() - start_datetime).days
-                    delta_msg = f'宝贝这是我们在一起的第 {day_delta} 天。\n'
-                except:
-                    delta_msg = ''
-            else:
+    def get_message(self, dictum_msg='', city_code='101030100', start_date='2018-01-01',
+                    sweet_words='From your Valentine'):
+        '''
+        获取天气信息。网址：https://www.sojson.com/blog/305.html
+        :param dictum_msg: str,发送给朋友的信息
+        :param city_code: str,城市对应编码
+        :param start_date: str,恋爱第一天日期
+        :param sweet_words: str,来自谁的留言
+        :return: str,需要发送的话。
+        '''
+        # 今日日期
+        today_time = datetime.now().strftime('%Y{y}%m{m}%d{d} %H:%M:%S').format(y='年', m='月', d='日')
+
+        # 在一起，一共多少天了，如果没有设置初始日期，则不用处理
+        if start_date:
+            try:
+                start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+                day_delta = (datetime.now() - start_datetime).days
+                delta_msg = f'宝贝这是我们在一起的第 {day_delta} 天。\n'
+            except:
                 delta_msg = ''
+        else:
+            delta_msg = ''
 
-            today_msg = f'{today_time}\n{delta_msg}{notice}。\n{temperature}\n{wind}\n{aqi}\n{dictum_msg}{sweet_words if sweet_words else ""}\n'
-            return today_msg
+        today_msg = f'{today_time}\n{delta_msg}{self.get_weather_msg(city_code)}{dictum_msg}{sweet_words if sweet_words else ""}\n'
+        return today_msg
 
 
 if __name__ == '__main__':
