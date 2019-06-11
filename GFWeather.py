@@ -46,7 +46,7 @@ class GFWeather:
         # 登陆，尝试 5 次
         for _ in range(5):
             # 命令行显示登录二维码
-            # itchat.auto_login(enableCmdQR=True)
+            #itchat.auto_login(enableCmdQR=True)
             if os.environ.get('MODE') == 'server':
                 itchat.auto_login(enableCmdQR=2)
             else:
@@ -82,8 +82,7 @@ class GFWeather:
                           minute=config.alarm_minute, misfire_grace_time=GRACE_PERIOD)
         # 每隔  分钟发送一条数据用于测试。
         if utils.isDebug():
-            self.send_msg()
-            scheduler.add_job(self.send_msg, 'interval', seconds=40 * 60)
+            scheduler.add_job(self.send_msg, 'cron', day_of_week='mon-fri', hour='8-11,13-17', minute=30)
         scheduler.start()
 
     def send_msg(self, is_test=False):
