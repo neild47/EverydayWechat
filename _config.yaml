@@ -9,12 +9,12 @@ alarm_timed: '13:00'
 # 1 : ONE●一个
 # 2 : 词霸（每日英语，双语）
 # 3 : 土味情话
-dictum_channel: 3
+dictum_channel: 1
 
 girlfriend_infos:
   -
     #女友微信昵称
-    wechat_name: 'Coco cui'
+    wechat_name: '孙奥伟'
     #女友所在桂林
     city_name: '青岛'
     # 从那天开始勾搭的（可空）

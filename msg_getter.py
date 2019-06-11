@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from config import config
 import utils
 from datetime import datetime
+from one_ids import oneIds
+import random
 
 
 class MsgGetter:
@@ -36,6 +38,16 @@ class MsgGetter:
             every_msg = soup_texts.find_all('div', class_='fp-one-cita')[0].find('a').text
             return every_msg + "\n"
         print('每日一句获取失败')
+        return ''
+
+    def get_random_ONE_msg(self):
+        url = "http://wufazhuce.com/one/"
+        random_id = random.Random().randint(0, len(oneIds) - 1)
+        resp = requests.get(url + str(random_id), headers=config.headers)
+        if resp.status_code == 200:
+            soup_texts = BeautifulSoup(resp.text, 'lxml')
+            msg = soup_texts.find_all("div", class_='one-cita')[0].text
+            return msg + "\n"
         return ''
 
     def get_lovelive_msg(self):
@@ -94,6 +106,17 @@ class MsgGetter:
 
     def get_today_time(self):
         return datetime.now().strftime('%Y{y}%m{m}%d{d} %H:%M:%S').format(y='年', m='月', d='日') + "\n"
+
+    def get_drink_msg(self):
+        strs = ['快喝水！！！', '起来走达走达喝点水', '起来溜达溜达喝点水', '久坐对身体不好，起来喝点水', '快起来喝水']
+        r = random.Random()
+        return strs[r.randint(0, len(strs) - 1)]
+
+    def get_msg_by_channel(self, channel):
+        channelToMsgFunc = {1: self.get_random_ONE_msg, 2: self.get_ciba_msg, 3: self.get_lovelive_msg}
+        if channelToMsgFunc[channel]:
+            return channelToMsgFunc[channel]()
+        return ''
 
 
 msgGetter = MsgGetter()

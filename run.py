@@ -1,4 +1,5 @@
 from GFWeather import GFWeather
+import random
 
 
 def run():
@@ -17,6 +18,10 @@ def test_run():
     GFWeather().send_msg(is_test=True)
 
 
+def test_random():
+    r = random.Random()
+    print(r.randint(0, 2))
+
+
 if __name__ == '__main__':
-    # test_run()
     run()

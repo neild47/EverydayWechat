@@ -80,9 +80,10 @@ class GFWeather:
         # 每天9：30左右给女朋友发送每日一句
         scheduler.add_job(self.send_msg, 'cron', hour=config.alarm_hour,
                           minute=config.alarm_minute, misfire_grace_time=GRACE_PERIOD)
-        # 每隔 2 分钟发送一条数据用于测试。
+        # 每隔  分钟发送一条数据用于测试。
         if utils.isDebug():
-            scheduler.add_job(self.send_msg, 'interval', seconds=30)
+            self.send_msg()
+            scheduler.add_job(self.send_msg, 'interval', seconds=40 * 60)
         scheduler.start()
 
     def send_msg(self, is_test=False):
@@ -94,21 +95,14 @@ class GFWeather:
         print("*" * 50)
         print('获取相关信息...')
 
-        if config.dictum_channel == 1:
-            dictum_msg = msgGetter.get_dictum_msg()
-        elif config.dictum_channel == 2:
-            dictum_msg = msgGetter.get_ciba_msg()
-        elif config.dictum_channel == 3:
-            dictum_msg = msgGetter.get_lovelive_msg()
-        else:
-            dictum_msg = ''
+        dictum_msg = msgGetter.get_msg_by_channel(config.dictum_channel)
 
         for girlfriend in config.girlfriend_list:
             city_code = girlfriend.get('city_code')
             start_date = girlfriend.get('start_date').strip()
             sweet_words = girlfriend.get('sweet_words')
-            today_msg = self.get_message(dictum_msg, city_code=city_code, start_date=start_date,
-                                         sweet_words=sweet_words)
+            today_msg = self.concat_message(dictum_msg, city_code=city_code, start_date=start_date,
+                                            sweet_words=sweet_words)
             name_uuid = girlfriend.get('name_uuid')
             wechat_name = girlfriend.get('wechat_name')
             print(f'给『{wechat_name}』发送的内容是:\n{today_msg}')
@@ -121,8 +115,8 @@ class GFWeather:
 
         print('发送成功..\n')
 
-    def get_message(self, dictum_msg='', city_code='101030100', start_date='2018-01-01',
-                    sweet_words='From your Valentine'):
+    def concat_message(self, dictum_msg='', city_code='101030100', start_date='2018-01-01',
+                       sweet_words='From your Valentine'):
         '''
         获取天气信息。网址：https://www.sojson.com/blog/305.html
         :param dictum_msg: str,发送给朋友的信息
@@ -131,7 +125,8 @@ class GFWeather:
         :param sweet_words: str,来自谁的留言
         :return: str,需要发送的话。
         '''
-        today_msg = f'{msgGetter.get_today_time()}{msgGetter.get_delta_msg(start_date)}{msgGetter.get_weather_msg(city_code)}{dictum_msg}{sweet_words if sweet_words else ""}\n'
+        # today_msg = f'{msgGetter.get_today_time()}{msgGetter.get_delta_msg(start_date)}{msgGetter.get_weather_msg(city_code)}{dictum_msg}{sweet_words if sweet_words else ""}\n'
+        today_msg = f'{msgGetter.get_drink_msg()}\n{dictum_msg}'
         return today_msg
 
 
